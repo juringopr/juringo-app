@@ -57,7 +57,7 @@ def index():
         "index.html",
         tickers=tickers,
         result=result,
-        chart_filename=chart_filename
+        chart_filename=chart_filename,
         selected_market=selected_market,
         selected_ticker=selected_ticker,
     )
@@ -67,4 +67,5 @@ if __name__ == "__main__":
     # Render가 제공하는 PORT를 사용 + 외부 접속 가능하도록 0.0.0.0 바인딩
     port = int(os.environ.get("PORT", "10000"))
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
