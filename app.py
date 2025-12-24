@@ -1,0 +1,64 @@
+from flask import Flask, render_template, request
+import os
+from analyzer import analyze_stock  # 분석 함수 분리된 파일에서 임포트
+
+app = Flask(__name__)
+
+# 경로 설정
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 📌 티커 로딩 함수
+def load_tickers(market):
+    file_map = {
+        "NASDAQ": "nasdaq_tickers.txt",
+        "KOSPI": "kospi_tickers.txt",
+        "KOSDAQ": "kosdaq_tickers.txt"
+    }
+    file_name = file_map.get(market)
+    if not file_name:
+        return []
+
+    file_path = os.path.join(BASE_DIR, file_name)
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+            if market == "NASDAQ":
+                # Symbol|Name|... 형식에서 Symbol만 추출
+                return [line.split("|")[0] for line in lines if "|" in line]
+            else:
+                return lines
+    except Exception as e:
+        print(f"❌ 티커 로딩 오류: {e}")
+        return []
+
+# 📌 기본 라우트
+@app.route("/", methods=["GET", "POST"])
+def index():
+    result = ""
+    chart_url = ""
+    selected_market = request.form.get("market", "NASDAQ")
+    selected_ticker = request.form.get("ticker", "").strip()
+    custom_ticker = request.form.get("custom_ticker", "").strip().upper()
+
+    # 티커 리스트 로딩
+    tickers = load_tickers(selected_market)
+
+    final_ticker = custom_ticker if custom_ticker else selected_ticker
+
+    if request.method == "POST" and final_ticker:
+        try:
+            result, chart_url = analyze_stock(final_ticker)
+        except Exception as e:
+            result = f"⚠️ 오류 발생: {str(e)}"
+            chart_url = ""
+
+    return render_template("index.html",
+                           tickers=tickers,
+                           result=result,
+                           chart_url=chart_url,
+                           selected_market=selected_market,
+                           selected_ticker=selected_ticker)
+
+# 실행
+if __name__ == "__main__":
+    app.run(debug=True)
