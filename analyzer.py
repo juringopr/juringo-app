@@ -10,8 +10,10 @@ def analyze_stock(ticker: str, static_dir: str | None = None):
     try:
         # ✅ 데이터 불러오기
         df = yf.download(ticker, period="2y", auto_adjust=True)
+
+        # [보강] 데이터 길이 포함해서 안내 (원인 파악 쉬움)
         if df.empty or len(df) < 200:
-            return f"❌ [{ticker}] 가격 데이터가 부족하거나 비어 있습니다.", None
+            return f"❌ [{ticker}] 가격 데이터가 부족하거나 비어 있습니다. (데이터 길이: {len(df)})", None
 
         sp500 = yf.download("^GSPC", start=df.index[0], end=df.index[-1], auto_adjust=True)
         if sp500.empty:
@@ -155,7 +157,6 @@ def analyze_stock(ticker: str, static_dir: str | None = None):
         plt.savefig(chart_path, bbox_inches="tight")
         plt.close()
 
-        # ✅ chart_filename만 리턴 (템플릿에서 url_for로 /static/ URL 생성)
         return result, chart_filename
 
     except Exception as e:
