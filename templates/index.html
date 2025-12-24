@@ -62,8 +62,9 @@
         <pre>{{ result }}</pre>
     {% endif %}
 
-    {% if chart_url %}
-        <img src="{{ chart_url }}" alt="차트" width="500" height="500">
-    {% endif %}
+        {% if chart_filename %}
+          <img src="{{ url_for('static', filename=chart_filename) }}">
+        {% endif %}
 </body>
 </html>
+
