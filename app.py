@@ -52,13 +52,17 @@ def index():
             result = f"⚠️ 오류 발생: {str(e)}"
             chart_url = ""
 
-    return render_template("index.html",
-                           tickers=tickers,
-                           result=result,
-                           chart_url=chart_url,
-                           selected_market=selected_market,
-                           selected_ticker=selected_ticker)
+    return render_template(
+        "index.html",
+        tickers=tickers,
+        result=result,
+        chart_url=chart_url,
+        selected_market=selected_market,
+        selected_ticker=selected_ticker,
+    )
 
-# 실행
+# ✅ Render 배포용 실행 (핵심)
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Render가 제공하는 PORT를 사용 + 외부 접속 가능하도록 0.0.0.0 바인딩
+    port = int(os.environ.get("PORT", "10000"))
+    app.run(host="0.0.0.0", port=port, debug=False)
