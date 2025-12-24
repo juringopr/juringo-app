@@ -1,5 +1,7 @@
 import yfinance as yf
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
 import uuid
@@ -151,3 +153,4 @@ def analyze_stock(ticker: str):
 
     except Exception as e:
         return f"⚠️ 오류 발생: {str(e)}", None
+
