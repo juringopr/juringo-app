@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 import os
-from analyzer import analyze_stock  # 분석 함수 분리된 파일에서 임포트
+from analyzer import analyze_stock  # 분석 함수
 
 app = Flask(__name__)
 
@@ -35,7 +35,8 @@ def load_tickers(market):
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = ""
-    chart_url = ""
+    chart_filename = None  # ✅ GET에서도 항상 존재하도록 (UnboundLocalError 방지)
+
     selected_market = request.form.get("market", "NASDAQ")
     selected_ticker = request.form.get("ticker", "").strip()
     custom_ticker = request.form.get("custom_ticker", "").strip().upper()
@@ -47,25 +48,25 @@ def index():
 
     if request.method == "POST" and final_ticker:
         try:
-                static_dir = os.path.join(app.root_path, "static")
-                result, chart_filename = analyze_stock(final_ticker, static_dir=static_dir)
+            # ✅ Render/Flask에서 static 경로 안정화
+            static_dir = os.path.join(app.root_path, "static")
+            os.makedirs(static_dir, exist_ok=True)
+
+            result, chart_filename = analyze_stock(final_ticker, static_dir=static_dir)
         except Exception as e:
             result = f"⚠️ 오류 발생: {str(e)}"
-            chart_url = ""
+            chart_filename = None
 
     return render_template(
         "index.html",
         tickers=tickers,
         result=result,
-        chart_filename=chart_filename,
+        chart_filename=chart_filename,  # ✅ 파일명만 넘김
         selected_market=selected_market,
         selected_ticker=selected_ticker,
     )
 
-# ✅ Render 배포용 실행 (핵심)
+# ✅ Render 배포용 실행 (포트 바인딩 필수)
 if __name__ == "__main__":
-    # Render가 제공하는 PORT를 사용 + 외부 접속 가능하도록 0.0.0.0 바인딩
     port = int(os.environ.get("PORT", "10000"))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
