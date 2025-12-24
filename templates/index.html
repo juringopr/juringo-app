@@ -1,70 +1,240 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>📊 Cup with Handle 분석기</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 30px; }
-        label { font-weight: bold; }
-        select, input[type="text"] { padding: 5px; margin: 5px 0; }
-        button { padding: 8px 16px; margin-top: 10px; font-size: 14px; }
-        pre { white-space: pre-wrap; font-family: inherit; }
-    </style>
-    <script>
-        function toggleInput() {
-            const checkbox = document.getElementById("use_custom");
-            const customInput = document.getElementById("custom_ticker");
-            const selectBox = document.getElementById("ticker_select");
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Juringo Analyzer</title>
 
-            if (checkbox.checked) {
-                customInput.disabled = false;
-                selectBox.selectedIndex = 0;
-            } else {
-                customInput.disabled = true;
-                customInput.value = '';
-            }
-        }
-    </script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #0f1b33;
+      --text: #e8eefc;
+      --muted: #9fb0d0;
+      --line: rgba(255,255,255,.08);
+      --accent: #6ea8ff;
+      --accent2: #7ee0c3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 0 16px 40px;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 26px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #0f1b33;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .chip b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #071122;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    pre {
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.55;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.25);
+    }
+
+    .chartWrap {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.25);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ✅ 차트 비율 유지 + 세로 500px */
+    .chartImg {
+      height: 500px;
+      width: auto;
+      max-width: 100%;
+      display: block;
+    }
+
+    .muted {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+  </style>
 </head>
+
 <body>
-    <h1>📈 Cup with Handle 패턴 분석</h1>
+  <div class="wrap">
+    <h1>Juringo Stock Analyzer</h1>
 
-    <form method="POST">
-        <label>📂 시장 선택:</label>
-        <select name="market" onchange="this.form.submit()">
-            <option value="NASDAQ" {% if selected_market == 'NASDAQ' %}selected{% endif %}>NASDAQ</option>
-            <option value="KOSPI" {% if selected_market == 'KOSPI' %}selected{% endif %}>KOSPI</option>
-            <option value="KOSDAQ" {% if selected_market == 'KOSDAQ' %}selected{% endif %}>KOSDAQ</option>
-        </select>
+    <div class="grid">
+      <!-- LEFT : FORM -->
+      <div class="card">
+        <form method="POST">
 
-        <br><br>
+          <div class="row">
+            <div style="flex:1;">
+              <label>Market</label>
+              <select name="market">
+                <option value="NASDAQ" {% if selected_market == "NASDAQ" %}selected{% endif %}>NASDAQ</option>
+                <option value="KOSPI" {% if selected_market == "KOSPI" %}selected{% endif %}>KOSPI</option>
+                <option value="KOSDAQ" {% if selected_market == "KOSDAQ" %}selected{% endif %}>KOSDAQ</option>
+              </select>
+            </div>
+          </div>
 
-        <label>🔎 티커 선택:</label>
-        <select name="ticker" id="ticker_select">
-            <option value="">-- 선택 안함 --</option>
-            {% for ticker in tickers %}
-                <option value="{{ ticker }}" {% if selected_ticker == ticker %}selected{% endif %}>{{ ticker }}</option>
-            {% endfor %}
-        </select>
+          <div class="row">
+            <div style="flex:1;">
+              <label>Ticker</label>
+              <select name="ticker" id="tickerSelect">
+                <option value="">-- 선택 --</option>
+                {% for t in tickers %}
+                  <option
+                    value="{{ t.symbol }}"
+                    data-name="{{ t.name|e }}"
+                    {% if selected_ticker == t.symbol %}selected{% endif %}
+                  >
+                    {{ t.symbol }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
 
-        <br>
-        <input type="checkbox" id="use_custom" onclick="toggleInput()">
-        또는 직접 입력:
-        <input type="text" name="custom_ticker" id="custom_ticker" placeholder="예: AAPL" {% if not custom_ticker %}disabled{% endif %} value="{{ custom_ticker }}">
+            <!-- 종목명 표시 -->
+            <div>
+              <div class="chip">
+                <span>종목명</span>
+                <b id="tickerName">-</b>
+              </div>
+            </div>
+          </div>
 
-        <br><br>
-        <button type="submit">분석 시작</button>
-    </form>
+          <div class="row">
+            <div style="flex:1;">
+              <label>직접 입력</label>
+              <input type="text" name="custom_ticker" placeholder="예: AAPL / 005930" />
+            </div>
+          </div>
 
-    <hr>
+          <button type="submit">분석</button>
 
-    {% if result %}
-        <pre>{{ result }}</pre>
-    {% endif %}
+          <div class="muted">
+            • KOSPI/KOSDAQ는 숫자만 입력해도 자동 인식<br>
+            • NASDAQ의 BRK.B → BRK-B 자동 변환
+          </div>
+        </form>
+      </div>
+
+      <!-- RIGHT : RESULT -->
+      <div class="card">
+        {% if result %}
+          <pre>{{ result }}</pre>
+        {% else %}
+          <div class="muted">티커를 선택하거나 직접 입력 후 분석을 눌러주세요.</div>
+        {% endif %}
 
         {% if chart_filename %}
-          <img src="{{ url_for('static', filename=chart_filename) }}">
+          <div class="chartWrap">
+            <img
+              class="chartImg"
+              src="{{ url_for('static', filename=chart_filename) }}"
+              alt="chart"
+            />
+          </div>
         {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateTickerName() {
+      const sel = document.getElementById("tickerSelect");
+      const opt = sel.options[sel.selectedIndex];
+      const name = opt && opt.dataset && opt.dataset.name ? opt.dataset.name : "";
+      document.getElementById("tickerName").textContent = name || "-";
+    }
+
+    document.getElementById("tickerSelect").addEventListener("change", updateTickerName);
+    updateTickerName();
+  </script>
 </body>
 </html>
-
