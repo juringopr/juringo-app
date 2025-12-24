@@ -26,23 +26,13 @@ def normalize_ticker(ticker: str, market: str) -> str:
 
     return t
 
-def load_tickers_with_names(market: str):
+def _load_tickers_from_txt(market: str):
     """
-    반환: [{"symbol":"005930","name":"삼성전자"}, ...] 형태
-    - KOSPI/KOSDAQ: KRX에서 자동 수집(캐시)
-    - NASDAQ: 기존 txt(Symbol|Name|...) 사용
+    TXT 폴백 로더:
+    - NASDAQ: Symbol|Name|... 또는 Symbol만 있는 파일 모두 처리
+    - KOSPI/KOSDAQ: 6자리 코드만 또는 코드|이름 모두 처리
+    반환: [{"symbol":"...", "name":"..."}]
     """
-    # ✅ KOSPI/KOSDAQ는 KRX 캐시 사용
-    if market in ("KOSPI", "KOSDAQ"):
-        try:
-            krx = fetch_krx_tickers(BASE_DIR)
-            return krx.get(market, [])
-        except Exception as e:
-            print(f"❌ KRX 티커 로딩 실패: {e}")
-            # 실패 시 폴백: txt 시도 (있다면)
-            # 아래 txt 로직으로 이어짐
-
-    # NASDAQ 또는 폴백(txt)
     file_map = {
         "NASDAQ": "nasdaq_tickers.txt",
         "KOSPI": "kospi_tickers.txt",
@@ -53,38 +43,88 @@ def load_tickers_with_names(market: str):
         return []
 
     file_path = os.path.join(BASE_DIR, file_name)
-    tickers = []
+    if not os.path.exists(file_path):
+        print(f"❌ [TXT] 파일이 없음: {file_path}")
+        return []
 
+    tickers = []
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.read().splitlines()
 
-        if market == "NASDAQ":
-            for line in lines:
-                if "|" in line:
-                    parts = line.split("|")
-                    symbol = parts[0].strip()
-                    name = parts[1].strip() if len(parts) > 1 else ""
-                    if symbol:
-                        tickers.append({"symbol": symbol, "name": name})
-        else:
-            # KOSPI/KOSDAQ txt가 코드만 있으면 name은 공백
-            # 코드|이름 형태면 name도 표시
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                if "|" in line:
-                    code, name = line.split("|", 1)
-                    tickers.append({"symbol": code.strip(), "name": name.strip()})
-                else:
-                    tickers.append({"symbol": line, "name": ""})
+        for raw in lines:
+            line = (raw or "").strip()
+            if not line:
+                continue
 
+            # 헤더/설명 라인 스킵(필요시 추가)
+            # NASDAQ 파일에 'Symbol|Name|...' 같은 헤더가 있으면 제거
+            if market == "NASDAQ":
+                if line.lower().startswith("symbol|") or line.lower().startswith("symbol,"):
+                    continue
+
+            if "|" in line:
+                left, right = line.split("|", 1)
+                symbol = left.strip()
+                name = right.strip()
+            else:
+                symbol = line.strip()
+                name = ""
+
+            # NASDAQ 심볼만 "정상"으로 남기기 (공백/이상문자 제거)
+            if market == "NASDAQ":
+                # 예: AAPL, MSFT, BRK.B 등
+                # 심볼이 너무 길거나 공백 있으면 스킵
+                if (" " in symbol) or (len(symbol) > 15):
+                    continue
+                # 빈 심볼 스킵
+                if not symbol:
+                    continue
+
+            # 한국: 숫자면 6자리로 보정
+            if market in ("KOSPI", "KOSDAQ"):
+                sym = symbol.strip()
+                if sym.isdigit():
+                    sym = sym.zfill(6)
+                symbol = sym
+
+            tickers.append({"symbol": symbol, "name": name})
+
+        print(f"✅ [TXT] {market} tickers loaded: {len(tickers)} from {file_path}")
         return tickers
 
     except Exception as e:
-        print(f"❌ 티커 txt 로딩 오류: {e}")
+        print(f"❌ [TXT] 로딩 오류({market}): {e}")
         return []
+
+def load_tickers_with_names(market: str):
+    """
+    반환: [{"symbol":"005930","name":"삼성전자"}, ...]
+    우선순위:
+      1) KOSPI/KOSDAQ: KRX 캐시(성공 시)
+      2) 실패 시: TXT 폴백
+      3) NASDAQ: TXT
+    """
+    # ✅ KOSPI/KOSDAQ는 KRX 시도 → 실패하면 무조건 TXT
+    if market in ("KOSPI", "KOSDAQ"):
+        try:
+            krx = fetch_krx_tickers(BASE_DIR)
+            arr = krx.get(market, [])
+            if arr:
+                print(f"✅ [KRX] {market} tickers loaded: {len(arr)}")
+                return arr
+            else:
+                print(f"⚠️ [KRX] {market} 응답은 왔는데 리스트가 비었음 → TXT 폴백")
+        except Exception as e:
+            print(f"❌ [KRX] {market} 로딩 실패 → TXT 폴백: {e}")
+
+        return _load_tickers_from_txt(market)
+
+    # NASDAQ은 TXT 사용 (심볼/이름 파싱 견고하게)
+    if market == "NASDAQ":
+        return _load_tickers_from_txt("NASDAQ")
+
+    return []
 
 @app.route("/", methods=["GET", "POST"])
 def index():
