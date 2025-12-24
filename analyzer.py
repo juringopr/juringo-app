@@ -11,7 +11,7 @@ def analyze_stock(ticker: str, static_dir: str | None = None):
         # ✅ 데이터 불러오기
         df = yf.download(ticker, period="2y", auto_adjust=True)
 
-        # [보강] 데이터 길이 포함해서 안내 (원인 파악 쉬움)
+        # 데이터 길이 포함 안내(디버깅 편함)
         if df.empty or len(df) < 200:
             return f"❌ [{ticker}] 가격 데이터가 부족하거나 비어 있습니다. (데이터 길이: {len(df)})", None
 
@@ -133,7 +133,7 @@ def analyze_stock(ticker: str, static_dir: str | None = None):
         else:
             result += f"\n❌ {ticker}는 Cup with Handle 조건을 **아직 모두 충족하지 않습니다.**"
 
-        # ✅ 차트 저장 (안전한 방식)
+        # ✅ 차트 저장
         if static_dir is None:
             static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
         os.makedirs(static_dir, exist_ok=True)
