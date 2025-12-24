@@ -6,7 +6,12 @@ import matplotlib.pyplot as plt
 import os
 import uuid
 
-def analyze_stock(ticker: str):
+def analyze_stock(ticker: str, static_dir: str | None = None):
+    """
+    기존 로직 유지 + 차트 저장만 안정화.
+    - static_dir: Flask(app.root_path/static) 같은 절대경로를 넘기면 Render에서도 100% 안전
+    - 반환: (result, chart_filename)  # chart_filename은 'chart_xxx.png' (파일명만)
+    """
     try:
         # ✅ 데이터 불러오기
         df = yf.download(ticker, period="2y", auto_adjust=True)
@@ -131,8 +136,21 @@ def analyze_stock(ticker: str):
         else:
             result += f"\n❌ {ticker}는 Cup with Handle 조건을 **아직 모두 충족하지 않습니다.**"
 
-        # ✅ 차트 저장
-        chart_filename = f"static/chart_{uuid.uuid4().hex}.png"
+        # =========================
+        # ✅ 차트 저장 (여기만 안정화)
+        # =========================
+
+        # 1) static_dir가 없으면(로컬 실행) analyzer.py 기준 static 폴더 사용
+        if static_dir is None:
+            static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+        # 2) 폴더 없으면 생성
+        os.makedirs(static_dir, exist_ok=True)
+
+        # 3) 파일명만 만들고, 저장 경로는 절대경로로
+        chart_filename = f"chart_{uuid.uuid4().hex}.png"
+        chart_path = os.path.join(static_dir, chart_filename)
+
         plt.figure(figsize=(14, 6))
         plt.plot(df["Close"], label="종가", linewidth=2)
         plt.plot(df["MA21"], label="MA21", linestyle="--")
@@ -146,11 +164,13 @@ def analyze_stock(ticker: str):
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(chart_filename)
+
+        # bbox_inches로 잘림 방지
+        plt.savefig(chart_path, bbox_inches="tight")
         plt.close()
 
+        # ✅ 리턴: 기존(result) + 차트 파일명만 (템플릿에서 url_for로 처리)
         return result, chart_filename
 
     except Exception as e:
         return f"⚠️ 오류 발생: {str(e)}", None
-
