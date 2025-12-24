@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>📊 Cup with Handle 분석기</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 30px; }
+        label { font-weight: bold; }
+        select, input[type="text"] { padding: 5px; margin: 5px 0; }
+        button { padding: 8px 16px; margin-top: 10px; font-size: 14px; }
+        pre { white-space: pre-wrap; font-family: inherit; }
+    </style>
+    <script>
+        function toggleInput() {
+            const checkbox = document.getElementById("use_custom");
+            const customInput = document.getElementById("custom_ticker");
+            const selectBox = document.getElementById("ticker_select");
+
+            if (checkbox.checked) {
+                customInput.disabled = false;
+                selectBox.selectedIndex = 0;
+            } else {
+                customInput.disabled = true;
+                customInput.value = '';
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>📈 Cup with Handle 패턴 분석</h1>
+
+    <form method="POST">
+        <label>📂 시장 선택:</label>
+        <select name="market" onchange="this.form.submit()">
+            <option value="NASDAQ" {% if selected_market == 'NASDAQ' %}selected{% endif %}>NASDAQ</option>
+            <option value="KOSPI" {% if selected_market == 'KOSPI' %}selected{% endif %}>KOSPI</option>
+            <option value="KOSDAQ" {% if selected_market == 'KOSDAQ' %}selected{% endif %}>KOSDAQ</option>
+        </select>
+
+        <br><br>
+
+        <label>🔎 티커 선택:</label>
+        <select name="ticker" id="ticker_select">
+            <option value="">-- 선택 안함 --</option>
+            {% for ticker in tickers %}
+                <option value="{{ ticker }}" {% if selected_ticker == ticker %}selected{% endif %}>{{ ticker }}</option>
+            {% endfor %}
+        </select>
+
+        <br>
+        <input type="checkbox" id="use_custom" onclick="toggleInput()">
+        또는 직접 입력:
+        <input type="text" name="custom_ticker" id="custom_ticker" placeholder="예: AAPL" {% if not custom_ticker %}disabled{% endif %} value="{{ custom_ticker }}">
+
+        <br><br>
+        <button type="submit">분석 시작</button>
+    </form>
+
+    <hr>
+
+    {% if result %}
+        <pre>{{ result }}</pre>
+    {% endif %}
+
+    {% if chart_url %}
+        <img src="{{ chart_url }}" alt="차트" width="500" height="500">
+    {% endif %}
+</body>
+</html>
