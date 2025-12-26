@@ -15,36 +15,18 @@
       --accent: #6ea8ff;
       --accent2: #7ee0c3;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
       background: var(--bg);
       color: var(--text);
     }
+    .wrap { max-width: 1100px; margin: 32px auto; padding: 0 16px 40px; }
+    h1 { margin: 0 0 16px; font-size: 26px; }
 
-    .wrap {
-      max-width: 1100px;
-      margin: 32px auto;
-      padding: 0 16px 40px;
-    }
-
-    h1 {
-      margin: 0 0 16px;
-      font-size: 26px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 420px 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
-    }
+    .grid { display: grid; grid-template-columns: 420px 1fr; gap: 16px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 
     .card {
       background: #0f1b33;
@@ -53,13 +35,7 @@
       padding: 16px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
+    label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
     select, input {
       width: 100%;
       padding: 10px 12px;
@@ -68,31 +44,17 @@
       background: rgba(255,255,255,.04);
       color: var(--text);
     }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-      margin-bottom: 12px;
-    }
+    .row { display:flex; gap:10px; align-items:flex-end; margin-bottom:12px; }
 
     .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--line);
       background: rgba(255,255,255,.05);
-      font-size: 12px;
-      color: var(--muted);
+      font-size: 12px; color: var(--muted);
       white-space: nowrap;
     }
-
-    .chip b {
-      color: var(--text);
-      font-weight: 600;
-    }
+    .chip b { color: var(--text); font-weight: 600; }
 
     button {
       width: 100%;
@@ -105,6 +67,21 @@
       background: linear-gradient(90deg, var(--accent), var(--accent2));
     }
 
+    .muted { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* ✅ 종목명 표시(13pt) */
+    .stockTitle {
+      font-size: 13pt;
+      font-weight: 700;
+      margin: 0 0 8px;
+      line-height: 1.2;
+    }
+    .stockSub {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+
     pre {
       white-space: pre-wrap;
       font-size: 13px;
@@ -113,6 +90,7 @@
       border-radius: 12px;
       border: 1px solid var(--line);
       background: rgba(0,0,0,.25);
+      margin: 0;
     }
 
     .chartWrap {
@@ -133,12 +111,6 @@
       max-width: 100%;
       display: block;
     }
-
-    .muted {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 8px;
-    }
   </style>
 </head>
 
@@ -147,14 +119,13 @@
     <h1>Juringo Stock Analyzer</h1>
 
     <div class="grid">
-      <!-- LEFT : FORM -->
+      <!-- LEFT -->
       <div class="card">
-        <form method="POST">
-
+        <form method="POST" id="mainForm">
           <div class="row">
             <div style="flex:1;">
               <label>Market</label>
-              <select name="market">
+              <select name="market" id="marketSelect">
                 <option value="NASDAQ" {% if selected_market == "NASDAQ" %}selected{% endif %}>NASDAQ</option>
                 <option value="KOSPI" {% if selected_market == "KOSPI" %}selected{% endif %}>KOSPI</option>
                 <option value="KOSDAQ" {% if selected_market == "KOSDAQ" %}selected{% endif %}>KOSDAQ</option>
@@ -179,7 +150,6 @@
               </select>
             </div>
 
-            <!-- 종목명 표시 -->
             <div>
               <div class="chip">
                 <span>종목명</span>
@@ -198,14 +168,24 @@
           <button type="submit">분석</button>
 
           <div class="muted">
-            • KOSPI/KOSDAQ는 숫자만 입력해도 자동 인식<br>
-            • NASDAQ의 BRK.B → BRK-B 자동 변환
+            • Market 변경하면 종목 리스트가 자동 갱신됩니다.<br>
+            • NASDAQ: Security Name만 표시합니다.
           </div>
         </form>
       </div>
 
-      <!-- RIGHT : RESULT -->
+      <!-- RIGHT -->
       <div class="card">
+        {% if final_ticker %}
+          <!-- ✅ 현재종가(결과 텍스트) 위에 13pt 종목명 표시 -->
+          <div class="stockTitle">
+            {{ selected_name if selected_name else final_ticker }}
+          </div>
+          <div class="stockSub">
+            {{ final_ticker }}
+          </div>
+        {% endif %}
+
         {% if result %}
           <pre>{{ result }}</pre>
         {% else %}
@@ -214,11 +194,7 @@
 
         {% if chart_filename %}
           <div class="chartWrap">
-            <img
-              class="chartImg"
-              src="{{ url_for('static', filename=chart_filename) }}"
-              alt="chart"
-            />
+            <img class="chartImg" src="{{ url_for('static', filename=chart_filename) }}" alt="chart" />
           </div>
         {% endif %}
       </div>
@@ -232,6 +208,15 @@
       const name = opt && opt.dataset && opt.dataset.name ? opt.dataset.name : "";
       document.getElementById("tickerName").textContent = name || "-";
     }
+
+    // ✅ Market 변경 시: 티커/직접입력 비우고 제출 → 서버가 tickers 재로딩(분석은 안 함)
+    document.getElementById("marketSelect").addEventListener("change", function () {
+      const form = document.getElementById("mainForm");
+      document.getElementById("tickerSelect").value = "";
+      const custom = form.querySelector('input[name="custom_ticker"]');
+      if (custom) custom.value = "";
+      form.submit();
+    });
 
     document.getElementById("tickerSelect").addEventListener("change", updateTickerName);
     updateTickerName();
